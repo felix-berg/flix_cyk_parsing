@@ -4,19 +4,6 @@ enum CNFProd[v, a] with Order, Eq {
 }
 
 type alias CNFGrammar[v, a] = List[(v, Set[CNFProd[v, a]])]
-
-def numVars(cnf: CNFGrammar[v, a]): Int32 = List.length(cnf)
-def vars(cnf: CNFGrammar[v, a]): List[v] = List.map(p -> fst(p), cnf)
-
-def getProd(prod: CNFProd[v, a], cnf: CNFGrammar[v, a]): Option[v] with Order[a], Order[v] = 
-    List.foldLeft((opt, pair) -> match opt {
-        case Option.Some(var) => Option.Some(var)
-        case Option.None => 
-            let (v, set) = pair;
-            if (Set.memberOf(prod, set)) Option.Some(v)
-            else Option.None
-    }, Option.None, cnf)
-
 def getVarsWith(prod: CNFProd[v, a], cnf: CNFGrammar[v, a]): Set[v] with Order[a], Order[v] =
     List.foldLeft((set, pair) -> {
         let (v, vprods) = pair;
@@ -127,12 +114,7 @@ def dumbTest(): Unit \ IO = {
             CNFProd.Terminal(0),
             CNFProd.NonTerminal('S', 'S')
         }) :: List.Nil;
-
-    assertEq(getProd(CNFProd.Terminal(0),           cnf), Option.Some('S'));
-    assertEq(getProd(CNFProd.Terminal(1),           cnf), Option.None);
-    assertEq(getProd(CNFProd.NonTerminal('S', 'S'), cnf), Option.Some('S'));
-    assertEq(getProd(CNFProd.NonTerminal('S', 'T'), cnf), Option.None);
-
+        
     assertEq(getVarsWith(CNFProd.Terminal(0), cnf), Set#{ 'S' });
     assertEq(getVarsWith(CNFProd.Terminal(1), cnf), Set.empty());
 
