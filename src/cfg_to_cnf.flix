@@ -76,11 +76,6 @@ def removeLambdaProductions(cfg: Grammar[v, a]): RemoveLambdaProductionsResult[v
     { cfg = cfg1, nullable = nullable }
 }
 
-type alias DeadGrammarToCNFResult[v, a] = {
-    cnf = CNFGrammar[Int32, a],
-    map = Map[Int32, Set[CFGProd[v, a]]]
-}
-
 def deadGrammarToCNF(cfg: Grammar[v, a]): CNFGrammar[Int32, a] with Order[a], Order[v] = region rc {
     let count = ref 0 @ rc;
     let generate = () -> { 
@@ -121,6 +116,7 @@ def deadGrammarToCNF(cfg: Grammar[v, a]): CNFGrammar[Int32, a] with Order[a], Or
                 let bp: Int32 = generate();
                 // create grammar with B' => Y1'...Yn'
                 let ycnf = add(bp, y1 :: ys, acc);
+
                 // add rule A' -> X'B'
                 ycnf |> addCNFProduction(var, CNFProd.NonTerminal(xp, bp))
             case Option.None => ???
@@ -140,10 +136,3 @@ def deadGrammarToCNF(cfg: Grammar[v, a]): CNFGrammar[Int32, a] with Order[a], Or
         case Option.None => ??? // var not in `varmap`
     }, init)
 }
-
-
-type alias CNFConversionResult[v, a] = {
-    cnf = CNFGrammar[Int32, a],
-    mapping = Map[CNFProd[Int32, a], CFGProd[v, a]]
-}
-// def convertToCNF(cfg: Grammar[v, a]): CN
