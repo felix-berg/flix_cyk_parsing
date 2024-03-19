@@ -1,4 +1,4 @@
-enum CNFProd[v, a] with Order, Eq {
+enum CNFProd[v, a] with Order, Eq, ToString {
     case Terminal(a),
     case NonTerminal(v, v)
 }
