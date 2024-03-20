@@ -1,27 +1,35 @@
-def main(): Unit \ IO = {
-    dumbTest();
-    bracketsTest();
+enum CFGTree[v, a] with Order, Eq, ToString {
+    case Node(v, List[CFGTree[v, a]]),
+    case Leaf(a)
+}
 
-    let cfg: Grammar[Char, Char] = Map#{
+def convertParseTree(tree: CNFTree[Int32, a], map: Map[Int32, Set[CFGProd[v, a]]]): List[CFGTree[v, a]] with Order[v], Order[a] = match tree {
+    case CNFTree.Leaf(iv, a) => match Map.get(iv, map) {
+        case Option.Some(set) => ???
+        case Option.None => ???
+    }
+    case CNFTree.Node(iv, x, y) => ???
+}
+
+def main(): Unit \ IO = {
+    // dumbTest();
+    // bracketsTest();
+    // testBrackets();
+
+    let cfg = Map#{
         'S' => Set#{ 
-            Nil, 
-            CFGChar.Alph('(') :: CFGChar.Var('S') :: CFGChar.Alph(')') :: Nil,
-            CFGChar.Var('S') :: CFGChar.Var('S') :: Nil
+            CFGChar.Alph('c') :: Nil,
+            CFGChar.Alph('a') :: CFGChar.Var('S') :: CFGChar.Alph('b') :: Nil
         }
     };
 
-    let deadcfg = ((cfg |> removeLambdaProductions).cfg |> removeUnitProductions).cfg;
-    assert(deadcfg |> Map.forAll((_, prods) -> prods |> Set.forAll(prod -> not isUnitProduction(prod))));
-    assert(deadcfg |> Map.forAll((_, prods) -> prods |> Set.forAll(prod -> not isLambdaProduction(prod))));
-    let cnf = deadcfg |> deadGrammarToCNF;
-    cnf |> Map.forEach((k, prods) -> prods |> Set.forEach(p -> println("${k}: ${p}")));
+    let (cnf, map) = deadGrammarToCNF(cfg);
+    cnf |> Map.forEach((var, prod) -> println("${var}: ${prod}"));
+    // map |> Map.forEach((var, prod) -> println("r${var}: ${prod}"));
 
-    let parseWord = (str: String) -> cnf |> parseCNF(String.toList(str)) |> Set.filter(t -> match t {
-        case CNFTree.Leaf(0, _) => true
-        case CNFTree.Node(0, _, _) => true
-        case _ => false
-    });
-
-    assert(not (parseWord("()(()()()(()))()(()())") |> Set.isEmpty));
-    parseWord("()(()()())()") |> Set.forEach(println)
+    let cnftrees = cnf |> parseCNF(String.toList("acb"));
+    println("Before: ");
+    cnftrees |> Set.forEach(println);
+    cnftrees |> Set.map(tree -> convertParseTree(tree, map)) |> Set.forEach(println);
+    ()
 }

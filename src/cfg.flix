@@ -23,7 +23,7 @@ def getProductionTerminals(prod: CFGProd[v, a]): Set[a] with Order[a] =
     }, Set.empty())
 
 def getTerminals(cfg: Grammar[v, a]): Set[a] with Order[a], Order[v] =
-    cfg |> Map.map(prods -> prods |> Set.foldLeft((_, prod) -> getProductionTerminals(prod), Set.empty()))
+    cfg |> Map.map(prods -> prods |> Set.foldLeft((acc, prod) -> acc |> Set.union(getProductionTerminals(prod)), Set.empty()))
         |> Map.toSet |> Set.map(match (_, terms) -> terms) |> Set.flatten
 
 def getDerivable(var: v, cfg: Grammar[v, a]): Set[v] with Order[v], Eq[a] = region rc {
