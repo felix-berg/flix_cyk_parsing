@@ -98,3 +98,82 @@ def testBrackets(): Unit \ IO = {
     // parseWord("()(()()())()") |> Set.forEach(println);
     ()
 }
+
+def convertParseTreeTest(): Unit \ IO = {
+    let cfg = Map#{
+        'E' => Set#{ 
+            CFGChar.Var('E') :: CFGChar.Alph('+') :: CFGChar.Var('E') :: Nil,
+            CFGChar.Var('E') :: CFGChar.Alph('*') :: CFGChar.Var('E') :: Nil,
+            CFGChar.Alph('(') :: CFGChar.Var('E') :: CFGChar.Alph(')') :: Nil,
+
+            // CFGChar.Alph('a') :: CFGChar.Var('A') :: Nil,
+            CFGChar.Alph('a') :: Nil
+        }
+        // 'A' => Set#{
+        //     CFGChar.Alph('a') :: CFGChar.Var('A') :: Nil,
+        //     CFGChar.Alph('a') :: Nil
+        // }
+    };
+
+    let (cnf, varmap, alphmap) = deadGrammarToCNF(cfg);
+    println("CNF grammar: ");
+    cnf |> Map.forEach((var, prod) -> println("${var}: ${prod}"));
+
+    let cnftrees = cnf |> parseCNF(String.toList("a+a")) |> Set.filter(t -> match t { 
+        case CNFTree.Node(0, _, _) => true
+        case _ => false
+    });
+
+    println("Before: ");
+    cnftrees |> Set.forEach(println);
+    println("After: ");
+    cnftrees |> Set.map(tree -> convertCNFToCFGParseTree(tree, varmap, alphmap)) 
+        |> Set.forEach(println);
+    ()
+}
+
+def arithmeticTest(): Unit \ IO = {
+    def eval(tree: CFGTree[Char, Char]): Int32\IO = match tree {
+        case CFGTree.Node('S', CFGTree.Leaf(c) :: Nil) => Int32.fromString(Char.toString(c)) |> Option.getWithDefault(0)
+        case CFGTree.Node('S', CFGTree.Leaf('(') :: subtree :: CFGTree.Leaf(')') :: Nil) => eval(subtree) 
+        case CFGTree.Node('S', left :: CFGTree.Leaf(op) :: right :: Nil) => 
+            let (l, r) = (eval(left), eval(right));
+            match op {
+                case '+' => l + r
+                case '*' => l * r
+                case _ => ???
+            }
+        case _ => println(tree);???
+    };
+
+    let cfg = Map#{
+        'S' => Set#{ 
+            CFGChar.Var('S') :: CFGChar.Alph('+') :: CFGChar.Var('S') :: Nil,
+            CFGChar.Var('S') :: CFGChar.Alph('*') :: CFGChar.Var('S') :: Nil,
+            CFGChar.Alph('(') :: CFGChar.Var('S') :: CFGChar.Alph(')') :: Nil,
+            CFGChar.Alph('0') :: Nil,
+            CFGChar.Alph('1') :: Nil,
+            CFGChar.Alph('2') :: Nil,
+            CFGChar.Alph('3') :: Nil,
+            CFGChar.Alph('4') :: Nil,
+            CFGChar.Alph('5') :: Nil,
+            CFGChar.Alph('6') :: Nil,
+            CFGChar.Alph('7') :: Nil,
+            CFGChar.Alph('8') :: Nil,
+            CFGChar.Alph('9') :: Nil
+        }
+    };
+
+    let (cnf, varmap, alphmap) = deadGrammarToCNF(cfg);
+    let cnftrees = cnf |> parseCNF(String.toList("(1+4+5)*2"));
+    let trees = cnftrees |> Set.map(t -> convertCNFToCFGParseTree(t, varmap, alphmap) |> List.toSet) |> Set.flatten;
+
+    assert(trees |> Set.forAll(t -> verifyCFGTree(t, cfg)));
+    trees |> Set.forEach(t -> {
+        println("${t}: ");
+        let v = eval(t);
+        println("- evaluated to: ${v}")
+    });
+
+    ()
+}

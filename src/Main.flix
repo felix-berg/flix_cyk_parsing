@@ -1,64 +1,36 @@
-enum CFGTree[v, a] with Order, Eq, ToString {
-    case Node(v, List[CFGTree[v, a]]),
-    case Leaf(a)
-}
-
-def convertParseTree(tree: CNFTree[Int32, a], varmap: Map[Int32, v], alphmap: Map[Int32, a]): List[CFGTree[v, a]] with Order[v], Order[a] = match tree {
-    case CNFTree.Leaf(iv, a) => match Map.get(iv, alphmap) {
-        case Option.Some(alphvar) => CFGTree.Leaf(a) :: Nil
-        case Option.None => match Map.get(iv, varmap) {
-            case Option.Some(var) => CFGTree.Node(var, CFGTree.Leaf(a) :: Nil) :: Nil
-            case Option.None => ???
-        }
-    }
-    // iv -> XY
-    case CNFTree.Node(iv, x, y) => match Map.get(iv, varmap) {
-        case Option.Some(var) => 
-            let (l, r) = (convertParseTree(x, varmap, alphmap), convertParseTree(y, varmap, alphmap)); 
-            let children = List.append(l, r);
-            CFGTree.Node(var, children) :: Nil
-        case Option.None => match Map.get(iv, alphmap) {
-            case Option.Some(_) => ??? // iv -> XY where iv is a terminal production doesn't make any sense
-            case Option.None => 
-                let (l, r) = (convertParseTree(x, varmap, alphmap), convertParseTree(y, varmap, alphmap));
-                List.append(l, r)
-        }
-    }
-}
-
 def main(): Unit \ IO = {
     // dumbTest();
     // bracketsTest();
     // testBrackets();
+    // convertParseTreeTest();
+    // arithmeticTest();
 
     let cfg = Map#{
-        'E' => Set#{ 
-            CFGChar.Var('E') :: CFGChar.Alph('+') :: CFGChar.Var('E') :: Nil,
-            CFGChar.Var('E') :: CFGChar.Alph('*') :: CFGChar.Var('E') :: Nil,
-            CFGChar.Alph('(') :: CFGChar.Var('E') :: CFGChar.Alph(')') :: Nil,
-
-            // CFGChar.Alph('a') :: CFGChar.Var('A') :: Nil,
-            CFGChar.Alph('a') :: Nil
+        'S' => Set#{
+            CFGChar.Var('S') :: CFGChar.Alph('+') :: CFGChar.Var('T') :: Nil, CFGChar.Var('T') :: Nil
+        },
+        'T' => Set#{
+            CFGChar.Var('T') :: CFGChar.Alph('*') :: CFGChar.Var('F') :: Nil, CFGChar.Var('F') :: Nil,
+            CFGChar.Var('F') :: Nil
+        },
+        'F' => Set#{
+            CFGChar.Alph('(') :: CFGChar.Var('S') :: CFGChar.Alph(')') :: Nil, 
+            CFGChar.Var('a') :: Nil
         }
-        // 'A' => Set#{
-        //     CFGChar.Alph('a') :: CFGChar.Var('A') :: Nil,
-        //     CFGChar.Alph('a') :: Nil
-        // }
     };
 
-    let (cnf, varmap, alphmap) = deadGrammarToCNF(cfg);
-    println("CNF grammar: ");
-    cnf |> Map.forEach((var, prod) -> println("${var}: ${prod}"));
+    let { cfg = deadcfg, derivable = drv } = removeUnitProductions(cfg);
+    let (cnf, varmap, alphmap) = deadGrammarToCNF(deadcfg);
 
-    let cnftrees = cnf |> parseCNF(String.toList("a+a")) |> Set.filter(t -> match t { 
-        case CNFTree.Node(0, _, _) => true
-        case _ => false
-    });
+    let cnftrees = cnf |> parseCNF(String.toList("a*a+a"));
+    let trees1 = cnftrees |> Set.map(t -> convertCNFToCFGParseTree(t, varmap, alphmap) |> List.toSet) |> Set.flatten;
+    // let trees2 = trees1 |> Set.map(t -> match t {
+    //     case CFGTree.Node(var, lst) => match Map.get(var, drv) {
+    //         case Option.Some(tops)
+    //         case Option.None => ???
+    //     } 
+    //     case _ => t
+    // }) |> Set.flatten;
 
-    println("Before: ");
-    cnftrees |> Set.forEach(println);
-    println("After: ");
-    cnftrees |> Set.map(tree -> convertParseTree(tree, varmap, alphmap)) 
-        |> Set.forEach(println);
-    ()
+    println("")
 }
