@@ -9,21 +9,16 @@ def isLambdaProduction(prod: CFGProd[v, a]): Bool = match prod {
     case _ => false
 }
 
-type alias RemoveUnitProductionsResult[v, a] = { cfg = Grammar[v, a], derivable = Map[v, Set[v]] }
+def removeUnitProductions(cfg: Grammar[v, a]): Grammar[v, a] with Order[v], Order[a] = {
+    let dvbmap = cfg |> Map.mapWithKey((var, _) -> getDerivable(var, cfg));
 
-def removeUnitProductions(cfg: Grammar[v, a]): RemoveUnitProductionsResult[v, a] with Order[v], Order[a] = {
-    let dvbmap = cfg |> 
-        Map.mapWithKey((var, _) -> getDerivable(var, cfg));
-
-    let cfg1 = cfg |> Map.mapWithKey((var, prods) -> { 
+    cfg |> Map.mapWithKey((var, prods) -> { 
         let dvb = Map.getWithDefault(var, Set.empty(), dvbmap);
         // expand set of productions with productions of derivable vars
         dvb |> Set.map(war -> Map.getWithDefault(war, Set.empty(), cfg))
             |> Set.flatten |> Set.union(prods)
             |> Set.filter(prod -> not isUnitProduction(prod)) // remove unit productions
-    });
-
-    { cfg = cfg1, derivable = dvbmap }
+    })
 }
 
 def nullableProd(prod: CFGProd[v, a], nullable: MutSet[v, r]): Bool \ r with Order[v] = match prod {

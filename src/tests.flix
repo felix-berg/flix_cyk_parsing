@@ -81,7 +81,7 @@ def testBrackets(): Unit \ IO = {
         }
     };
 
-    let deadcfg = ((cfg |> removeLambdaProductions).cfg |> removeUnitProductions).cfg;
+    let deadcfg = (cfg |> removeLambdaProductions).cfg |> removeUnitProductions;
     assert(deadcfg |> Map.forAll((_, prods) -> prods |> Set.forAll(prod -> not isUnitProduction(prod))));
     assert(deadcfg |> Map.forAll((_, prods) -> prods |> Set.forAll(prod -> not isLambdaProduction(prod))));
 
@@ -175,5 +175,36 @@ def arithmeticTest(): Unit \ IO = {
         println("- evaluated to: ${v}")
     });
 
+    ()
+}
+
+def unitRecreationTest(): Unit \ IO = {
+    let cfg: Grammar[Char, Char] = Map#{
+        'S' => Set#{
+            CFGChar.Var('S') :: CFGChar.Alph('+') :: CFGChar.Var('T') :: Nil, 
+            CFGChar.Var('T') :: Nil
+        },
+        'T' => Set#{
+            CFGChar.Var('T') :: CFGChar.Alph('*') :: CFGChar.Var('F') :: Nil, 
+            CFGChar.Var('F') :: Nil
+        },
+        'F' => Set#{
+            CFGChar.Alph('(') :: CFGChar.Var('S') :: CFGChar.Alph(')') :: Nil, 
+            CFGChar.Alph('a') :: Nil
+        }
+    };
+
+
+    let deadcfg = removeUnitProductions(cfg);
+    let (cnf, varmap, alphmap) = deadGrammarToCNF(deadcfg);
+
+    let cnftrees = cnf |> parseCNF(String.toList("a"));
+    let trees1 = cnftrees |> Set.map(t -> convertCNFToCFGParseTree(t, varmap, alphmap) |> List.toSet) |> Set.flatten;
+    let trees2 = trees1 |> Set.map(tree -> recreateUnitProductions(tree, cfg)) |> Set.flatten;
+    
+    trees2 |> Set.filter(t -> match t {
+        case CFGTree.Node('S', _) => true
+        case _ => true
+    }) |> Set.forEach(println);
     ()
 }
