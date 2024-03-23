@@ -76,7 +76,7 @@ def removeLambdaProductions(cfg: Grammar[v, a]): RemoveLambdaProductionsResult[v
     { cfg = cfg1, nullable = nullable }
 }
 
-def deadGrammarToCNF(cfg: Grammar[v, a]): (CNFGrammar[Int32, a], Map[Int32, Set[CFGProd[v, a]]]) with Order[a], Order[v] = region rc {
+def deadGrammarToCNF(cfg: Grammar[v, a]): (CNFGrammar[Int32, a], Map[Int32, v], Map[Int32, a]) with Order[a], Order[v] = region rc {
     let count = ref 0 @ rc;
     let generate = () -> { 
         let bef = deref count;
@@ -85,7 +85,8 @@ def deadGrammarToCNF(cfg: Grammar[v, a]): (CNFGrammar[Int32, a], Map[Int32, Set[
     };
 
     // create a new variable A' for each variable A in the given grammar
-    let varmap:  Map[v, Int32] = Map.keysOf(cfg)  |> Set.map(var -> (var, generate())) |> Set.toMap;
+    let varPairs = Map.keysOf(cfg) |> Set.map(term -> (term, generate()));
+    let varmap:  Map[v, Int32] = varPairs |> Set.toMap;
 
     // create mappings (will be productions A' -> x in the final CNF grammar)
     let terminalVarPairs = getTerminals(cfg) |> Set.map(term -> (term, generate()));
@@ -97,31 +98,20 @@ def deadGrammarToCNF(cfg: Grammar[v, a]): (CNFGrammar[Int32, a], Map[Int32, Set[
         case CFGChar.Alph(alph)  => alphmap |> Map.get(alph)
     };
 
-    def addToAcc(var: Int32, prod: CFGProd[v, a], acc: Map[Int32, Set[CFGProd[v, a]]]): Map[Int32, Set[CFGProd[v, a]]] = match acc |> Map.get(var) {
-        case Option.None      => acc |> Map.insert(var, Set#{ prod })
-        case Option.Some(set) => acc |> Map.insert(var, set |> Set.insert(prod))
-    };
-
-    def getAcc(var: Int32, acc: Map[Int32, Set[CFGProd[v, a]]]): Set[CFGProd[v, a]] = match acc |> Map.get(var) { 
-        case Option.None => Set.empty()
-        case Option.Some(set) => set
-    };
-
     // return `cnf`, but expanded such that var => ..., where '...' corresponds to `prod`
     // for any added production A' => ..., add (A', ...) to `acc`
-    def add(var: Int32, prod: CFGProd[v, a], cnf: CNFGrammar[Int32, a], acc: Map[Int32, Set[CFGProd[v, a]]]): (CNFGrammar[Int32, a], Map[Int32, Set[CFGProd[v, a]]]) = {
-        let acc1 = acc |> addToAcc(var, prod); // memoize
+    def add(var: Int32, prod: CFGProd[v, a], cnf: CNFGrammar[Int32, a]): CNFGrammar[Int32, a] = {
         match prod {
             // A -> x for some symbol x
             case CFGChar.Alph(t) :: Nil => 
                 let cnf1 = cnf |> addCNFProduction(var, CNFProd.Terminal(t));
-                (cnf1, acc1)
+                cnf1
 
             // A -> XY for some X, Y (symbols or variables)
             case f :: s :: Nil => match (intval(f), intval(s)) {
                 case (Option.Some(x), Option.Some(y)) => 
                     let cnf1 = cnf |> addCNFProduction(var, CNFProd.NonTerminal(x, y));
-                    (cnf1, acc1)
+                    cnf1
                 case _ => ???
             }
 
@@ -132,11 +122,11 @@ def deadGrammarToCNF(cfg: Grammar[v, a]): (CNFGrammar[Int32, a], Map[Int32, Set[
                     let bp: Int32 = generate();
 
                     // create grammar with B' => Y1'...Yn'
-                    let (cnf1, acc2) = add(bp, y :: ys, cnf, acc1);
+                    let cnf1 = add(bp, y :: ys, cnf);
 
                     // add rule A' -> X'B'
                     let cnf2 = cnf1 |> addCNFProduction(var, CNFProd.NonTerminal(xp, bp));
-                    (cnf2, acc2)
+                    cnf2
                 case Option.None => ???
             }
             case _ => ??? // anything else means that `cfg` is NOT free of lambda/unit productions
@@ -148,20 +138,16 @@ def deadGrammarToCNF(cfg: Grammar[v, a]): (CNFGrammar[Int32, a], Map[Int32, Set[
         (cnf, p) -> cnf |> Map.insert(snd(p), Set#{ CNFProd.Terminal(fst(p)) }), 
     Map.empty());
 
-    let intcfg: Map[Int32, Set[CFGProd[v, a]]] = cfg |> Map.toSet |> Set.map(match (var, set) -> match varmap |> Map.get(var) {
-        case Option.Some(i) => (i, set)
-        case Option.None => ???
-    }) |> Set.toMap;
-
     // build on the initial set for each variable in `cfg`
-    let (cnf, newprods) = cfg |> Map.foldLeftWithKey((pair, var, set) -> match varmap |> Map.get(var) {
+    let res = cfg |> Map.foldLeftWithKey((pair, var, set) -> match varmap |> Map.get(var) {
         case Option.Some(iv) =>
-            set |> Set.foldLeft((pair1, prod) -> { 
-                let (cnf, acc) = pair1; 
-                add(iv, prod, cnf, acc)
-            }, pair)
+            set |> Set.foldLeft((cnf, prod) -> add(iv, prod, cnf), pair)
         case Option.None => ???
-    }, (initcnf, Map.empty()));
+    }, initcnf);
 
-    (cnf, newprods |> Map.unionWith((a, b) -> Set.union(a, b), intcfg))
+    (
+        res, 
+        varPairs |> Set.map(match (v, i) -> (i, v)) |> Set.toMap,
+        terminalVarPairs |> Set.map(match (v, i) -> (i, v)) |> Set.toMap
+    )
 }

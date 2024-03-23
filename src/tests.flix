@@ -85,7 +85,7 @@ def testBrackets(): Unit \ IO = {
     assert(deadcfg |> Map.forAll((_, prods) -> prods |> Set.forAll(prod -> not isUnitProduction(prod))));
     assert(deadcfg |> Map.forAll((_, prods) -> prods |> Set.forAll(prod -> not isLambdaProduction(prod))));
 
-    let (cnf, _) = deadcfg |> deadGrammarToCNF;
+    let (cnf, _, _) = deadcfg |> deadGrammarToCNF;
     cnf |> Map.forEach((k, prods) -> prods |> Set.forEach(p -> println("${k}: ${p}")));
 
     let parseWord = (str: String) -> cnf |> parseCNF(String.toList(str)) |> Set.filter(t -> match t {

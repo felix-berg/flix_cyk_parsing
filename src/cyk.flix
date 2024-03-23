@@ -36,8 +36,8 @@ def getCYKTable(str: List[a], cnf: CNFGrammar[v, a], rg: Region[r]): Option[CYKT
                     // for each pair X, Y where X => xi...xk and Y => xk+1...xj,
                     // if A -> XY for some A in the CFG, then A => xi...xj 
                     getVarsWith(CNFProd.NonTerminal(l, r), cnf) |>
-                    Set.map(var -> (var, k)) |> 
-                    add(i, j)
+                        Set.map(var -> (var, k)) |> 
+                        add(i, j)
                 }
             }
         };
@@ -67,8 +67,13 @@ mod Set {
         s |> Set.map(u -> t |> Set.map(v -> (u, v))) |> Set.flatten
 }
 
+def getTopVar(tree: CNFTree[v, a]): v = match tree {
+    case CNFTree.Leaf(var, _) => var
+    case CNFTree.Node(var, _, _) => var
+}
+
 // build the set of valid derivation trees of the substring  xi...xj of `str` based on the cyk table `table`
-def buildCNFTree(i: Int32, j: Int32, str: List[a], table: CYKTable[v, r]): Set[CNFTree[v, a]] \ r
+def buildCNFTree(i: Int32, j: Int32, str: List[a], table: CYKTable[v, r], cnf: CNFGrammar[v, a]): Set[CNFTree[v, a]] \ r
     with Order[a], Order[v] =
     if (i == j) {
         // only optional since `i` may be out of bounds
@@ -84,15 +89,16 @@ def buildCNFTree(i: Int32, j: Int32, str: List[a], table: CYKTable[v, r]): Set[C
             case Option.None => Set.empty()
         }
     } else {
-        table(i, j) |> Set.map(pair -> {
-            let (var, k) = pair;
-
+        table(i, j) |> Set.map(match (var, k) -> {
             // build subtrees and combine into Node(var, left, right)
-            let (leftset, rightset) = (buildCNFTree(i, k, str, table), buildCNFTree(k + 1, j, str, table));
-
+            let (leftset, rightset) = (buildCNFTree(i, k, str, table, cnf), buildCNFTree(k + 1, j, str, table, cnf));
             Set.product(leftset, rightset) |> 
-            Set.map(p2 -> { let (l, r) = p2; CNFTree.Node(var, l, r) })
-
+                Set.filter(match (l, r) -> { 
+                    // filter on subtrees with vars lv, rv where var -> lvrv is a production
+                    let (lv, rv) = (getTopVar(l), getTopVar(r));
+                    cnf |> Map.getWithDefault(var, Set.empty()) |> Set.memberOf(CNFProd.NonTerminal(lv, rv))
+                }) |>
+                Set.map(match (l, r) -> CNFTree.Node(var, l, r))
         }) |> Set.flatten
     }
 
@@ -100,7 +106,7 @@ def parseCNF(str: List[a], cnf: CNFGrammar[v, a]): Set[CNFTree[v, a]] with Order
     region cyk {
         match getCYKTable(str, cnf, cyk) {
             case Option.None => Set.empty()
-            case Option.Some(table) => buildCNFTree(0, List.length(str) - 1, str, table)
+            case Option.Some(table) => buildCNFTree(0, List.length(str) - 1, str, table, cnf)
         }
     }
 }
