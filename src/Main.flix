@@ -20,7 +20,6 @@ enum Token with Eq, Order, ToString {
 }
 
 mod Ast {
-
     use CFGChar.{Alph, Var}
     use Vars.{ BoolLit, Exp, BinOp, BinOpExp, IfThenElse, Digit }
     use Token.{ Digitt, Op, If, Else, LBracket, RBracket, LParen, RParen, True, False }
@@ -111,7 +110,6 @@ def main(): Unit \ IO = {
     // convertParseTreeTest();
     // arithmeticTest();
     // unitRecreationTest();
-    
 
     use CFGChar.{Alph, Var};
     use Vars.{ BoolLit, Exp, BinOp, BinOpExp, IfThenElse, Digit };

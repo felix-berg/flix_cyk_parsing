@@ -29,7 +29,7 @@ def getTerminals(cfg: Grammar[v, a]): Set[a] with Order[a], Order[v] =
 def getDerivable(var: v, cfg: Grammar[v, a]): Set[v] with Order[v], Eq[a] = region rc {
     // start with D = { var }
     let derivable = MutSet.empty(rc); 
-    MutSet.add!(var, derivable);
+    MutSet.add(var, derivable);
 
     def rec(): Set[v] = {
         let before = MutSet.size(derivable);
@@ -37,7 +37,7 @@ def getDerivable(var: v, cfg: Grammar[v, a]): Set[v] with Order[v], Eq[a] = regi
             let prods = cfg |> getProductions(war);
             prods |> Set.forEach(prod -> match prod {
                 case CFGChar.Var(war2) :: Nil => 
-                    MutSet.add!(war2, derivable)
+                    MutSet.add(war2, derivable)
                 case _ => ()
             })
         });

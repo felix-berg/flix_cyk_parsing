@@ -81,7 +81,7 @@ def testBrackets(): Unit \ IO = {
         }
     };
 
-    let deadcfg = (cfg |> removeLambdaProductions).cfg |> removeUnitProductions;
+    let deadcfg = (cfg |> removeLambdaProductions)#cfg |> removeUnitProductions;
     assert(deadcfg |> Map.forAll((_, prods) -> prods |> Set.forAll(prod -> not isUnitProduction(prod))));
     assert(deadcfg |> Map.forAll((_, prods) -> prods |> Set.forAll(prod -> not isLambdaProduction(prod))));
 

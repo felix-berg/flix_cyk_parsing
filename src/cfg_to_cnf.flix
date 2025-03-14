@@ -35,7 +35,7 @@ def nullableVars(cfg: Grammar[v, a]): Set[v] with Order[v], Order[a] = region rc
         // add each variable with nullable productions to nullable
         cfg |> Map.filter(set ->
                 set |> Set.exists(prod -> nullableProd(prod, nullable)))
-            |> Map.forEach((var, _) -> MutSet.add!(var, nullable));
+            |> Map.forEach((var, _) -> MutSet.add(var, nullable));
         
         // if nullable set is unchanged return, else recurse
         if (before != MutSet.size(nullable)) rec()
@@ -72,10 +72,10 @@ def removeLambdaProductions(cfg: Grammar[v, a]): RemoveLambdaProductionsResult[v
 }
 
 def deadGrammarToCNF(cfg: Grammar[v, a]): (CNFGrammar[Int32, a], Map[Int32, v], Map[Int32, a]) with Order[a], Order[v] = region rc {
-    let count = ref 0 @ rc;
+    let count = Ref.fresh(rc, 0);
     let generate = () -> { 
-        let bef = deref count;
-        count := bef + 1;
+        let bef = Ref.get(count);
+        count |> Ref.put(bef + 1);
         bef
     };
 

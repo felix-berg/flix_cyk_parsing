@@ -12,8 +12,8 @@ def getCYKTable(str: List[a], cnf: CNFGrammar[v, a], rg: Region[r]): Option[CYKT
         let get = (i, j) -> Array.get(computeIdx(i, j), arr);
         let add = (i, j, s: Set[(v, Int32)]) -> {
             let idx = computeIdx(i, j);
-            let new = Set.union(s, get(i, j));
-            Array.put(new, idx, arr)
+            let nw = Set.union(s, get(i, j));
+            Array.put(nw, idx, arr)
         };
 
         // for each i = 0...n-1 if X -> xi, then add it to table at (i, i)

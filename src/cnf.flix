@@ -15,7 +15,7 @@ def addCNFProduction(var: v, prod: CNFProd[v, a], cnf: CNFGrammar[v, a]): CNFGra
     case Option.None => 
         cnf |> Map.insert(var, Set#{ prod })
     case Option.Some(set) =>  {
-        let new = set |> Set.insert(prod);
-        cnf |> Map.insert(var, new)
+        let nw = set |> Set.insert(prod);
+        cnf |> Map.insert(var, nw)
     }
 }
