@@ -1,29 +1,29 @@
-enum Vars with Eq, Order, ToString {
-  case BinOp,
-  case BinOpExp,
-  case Exp,
-  case IfThenElse,
-  case BoolLit
-  case Digit
-}
-
-enum Token with Eq, Order, ToString {
-  case True, case False,
-  case Digitt(Char),
-  case Op(Char),
-  case If,
-  case Else,
-  case LBracket,
-  case RBracket,
-  case LParen,
-  case RParen
-}
-
-mod Ast {
+mod TestAst {
   use CFGChar.{Alph, Var}
   use Vars.{ BoolLit, Exp, BinOp, BinOpExp, IfThenElse, Digit }
   use Token.{ Digitt, Op, If, Else, LBracket, RBracket, LParen, RParen, True, False }
   use CFGTree.{Leaf, Node}
+
+  pub enum Vars with Eq, Order, ToString {
+    case BinOp,
+    case BinOpExp,
+    case Exp,
+    case IfThenElse,
+    case BoolLit
+    case Digit
+  }
+
+  pub enum Token with Eq, Order, ToString {
+    case True, case False,
+    case Digitt(Char),
+    case Op(Char),
+    case If,
+    case Else,
+    case LBracket,
+    case RBracket,
+    case LParen,
+    case RParen
+  }
 
   pub enum Op with Eq, Order, ToString {
     case Plus, case Minus, case Mult, case Div
@@ -104,12 +104,11 @@ mod Ast {
 }
 
 def ast_test(): Unit \ IO = {
-
   use CFGChar.{Alph, Var};
-  use Vars.{ BoolLit, Exp, BinOp, BinOpExp, IfThenElse, Digit };
-  use Token.{ Digitt, Op, If, Else, LBracket, RBracket, LParen, RParen, True, False };
+  use TestAst.Vars.{ BoolLit, Exp, BinOp, BinOpExp, IfThenElse, Digit };
+  use TestAst.Token.{ Digitt, Op, If, Else, LBracket, RBracket, LParen, RParen, True, False };
 
-  let cfg: Grammar[Vars, Token] = Map#{
+  let cfg: Grammar[TestAst.Vars, TestAst.Token] = Map#{
     Digit   => Set#{ Alph(Digitt('0')) :: Nil,
               Alph(Digitt('1')) :: Nil, 
               Alph(Digitt('2')) :: Nil, 
@@ -156,8 +155,8 @@ def ast_test(): Unit \ IO = {
       })
       |> Set.forEach(tree -> {
         assert(verifyCFGTree(tree, cfg));
-        let ast = Ast.transform(tree);
-        println(Ast.eval(ast))
+        let ast = TestAst.transform(tree);
+        println(TestAst.eval(ast))
       })
 
     case Option.None => 
